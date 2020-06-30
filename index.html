@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <video id="video" autoplay></video>
+    
+    <script>
+        const video = document.getElementById('video');
+        // aparte de recibir valores booleanos se pueden enviar objetos
+        //MediaTrackConstraints
+        /*
+        propiedaddes de audio
+            channelCount => { ideal: 10, exact: 10}
+            latency
+            sampleRate
+            volume
+        */
+        const constraints = {
+            audio:{
+                //channelCount: { ideal: 10, exact: 10},
+                //sampleRate: 20,
+                //volume: {},
+                echoCancellation: false
+            },
+            video:{
+                //aspectRatio: {},
+                //width: 1280,
+                //heigth: 720,
+                frameRate: {ideal: 10},
+                facingMode: "user" //o environment
+            }
+        }
+        navigator.mediaDevices.getUserMedia(constraints)
+        .then(stream => {
+            video.srcObject = stream;
+        })
+        .catch(error => console.log(error));
+    </script>
+</body>
+</html>

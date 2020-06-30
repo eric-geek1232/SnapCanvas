@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <img src="img/vigote.png" style="display: none;" id="bigote">
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <select id="camara-selections" >
+
+    </select>
+
+    <video id="video" autoplay style="display: none;" width="800" height="600"></video>
+</body>
+<script src="clmtrackr-dev/build/clmtrackr.js"></script>
+<script src="clmtrackr-dev/models/model_pca_20_svm.js"></script>
+<script>
+    const video = document.getElementById('video');
+    const selector = document.getElementById('camara-selections');
+    const bigote = document.getElementById('bigote');
+    const canvas = document.getElementById('canvas');
+    const lentes = new Image();
+    let imageLoaded = false;
+    const ctx = canvas.getContext('2d');
+    const tracker = new clm.tracker();
+    tracker.init(pModel); // lo iniciamos con un modelo de la variable pModel
+
+    lentes.src= 'img/lentes.png';
+
+    lentes.onload = function(){
+        imageLoaded = true;
+        //console.log(" se cargo la imagen");
+    }
+
+// add new tag on menu selector for choose one of the cameras
+    navigator.mediaDevices.enumerateDevices().then(devices =>{
+            devices.forEach(device => {
+                if(device.kind != "videoinput") return;
+
+                let optionTag = document.createElement('option');
+                optionTag.innerHTML = device.label;
+                optionTag.value = device.deviceId;
+                selector.appendChild(optionTag);
+            });
+    });
+    // aparte de recibir valores booleanos se pueden enviar objetos
+    //MediaTrackConstraints
+    /*
+    propiedaddes de audio
+        channelCount => { ideal: 10, exact: 10}
+        latency
+        sampleRate
+        volume
+    */
+
+    selector.addEventListener('change', function(evento){
+        let deviceId = this.options[this.selectedIndex].value; // choose one of camaras
+        start(deviceId);
+    })
+
+    function drawImageRealTime(imagen, positions, modifierWidth, modifierheight){
+        //console.log(positions);
+        // la condicion es para que los valores nulos o undefine no sean tomados en caso de ser asi rompemos el flujo de la funcion
+        if(! positions.x.init || !positions.x.final || !positions.y.init || !positions.y.final) return; 
+        positions.x.init[0]  -= modifierWidth;
+        positions.x.final[0] += modifierWidth;
+
+        positions.y.init[1] -= modifierheight;
+        positions.y.final[1] += modifierheight;
+        const width = positions.x.final[0] - positions.x.init[0];
+        const height = positions.y.final[1] - positions.y.init[1];
+
+        ctx.drawImage(imagen, positions.x.init[0], positions.y.init[1],width, height); // draw item on your face
+        
+    }
+
+    function start(deviceId = undefined){
+        const constraints = {
+        //audio:{
+            //channelCount: { ideal: 10, exact: 10},
+            //sampleRate: 20,
+            //volume: {},
+            //echoCancellation: true
+        //},
+        video: {                           //properties
+            deviceId: deviceId
+            //aspectRatio: {},
+            //width: 1280,
+            //heigth: 720,
+            //frameRate: {ideal: 10},
+            //facingMode: "user" //o environment
+        }
+    }
+    navigator.mediaDevices.getUserMedia(constraints)
+    .then(stream => {
+        video.srcObject = stream;
+        setTimeout (function (){
+            tracker.start(video); // draw or map
+            requestAnimationFrame(loop);
+        },500);
+    })
+    .catch(error => console.log(error));
+    }
+
+    function loop(){
+        ctx.drawImage(video, 0,0,800,600); // dibujar video en el canvas
+        //tracker.draw(canvas);
+
+        let positions = tracker.getCurrentPosition();
+        if(imageLoaded)
+            drawImageRealTime(lentes, {
+                x:{
+                    init: positions[0],
+                    final: positions[14]
+                },
+                y:{
+                    init: positions[33],
+                    final: positions[41]
+                }
+            },0,25);
+
+            drawImageRealTime(bigote, {
+                x:{
+                    init: positions[44], // cordenas en x
+                    final: positions[50]
+                },
+                y:{
+                    init: positions[37], // coordenadas en y
+                    final: positions[47]
+                }
+            },25,35);          
+        requestAnimationFrame(loop);
+    }
+    start(); // defaiult camera
+</script>
+
+</html>
